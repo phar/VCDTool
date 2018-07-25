@@ -33,18 +33,27 @@ class VCDFile():
 		self.triggers_enabled = True
 		self.annotations = []
 
-	def addAnnotation(self, text):
-		self.annotations.append(self.current_time, text)
+	def addAnnotation(self, signal, text):
+		channelcnt = 0
+		for e,v in self.variables.items():
+			if v["name"]  == signal:
+				self.annotations.append((self.current_time, channelcnt, text))
+			channelcnt += 1
 
 	def plot(self):
 		(t,v) = self.asTrace()
 		for tt,l in v.items():
 			plt.plot(t,l, label=tt)
+		
+		for (t,o,txt) in self.annotations:
+			plt.scatter(t,o+ (.45 * .95), 10, color='black')
+			plt.text(t,o + (.5 * .95),txt, ha="center", va="center",size=15)
+
 		plt.legend()
 		plt.show()
 
-	def triggerEnabled(self,true_false=None):
-		if self.triggerEnabled != None:
+	def enableTriggers(self,true_false=None):
+		if true_false != None:
 			self.triggers_enabled = bool(true_false)
 		return self.triggers_enabled
 
@@ -162,30 +171,24 @@ class VCDFile():
 	def asTrace(self):
 		timelist = []
 		datalist = {}
-
 		channelcnt = 0
 		for e,v in self.variables.items():
 			datalist[e] = {"trace": [], "state":0,"newstate":0, "offset":channelcnt, "name":v['name']}
 			channelcnt += 1
 		
 		for i in xrange(len(self.signal)):
+			for c, dat in self.signal[i][1]:   #process the changes
+				datalist[c]['newstate'] = dat
+
 			if self.t2 > self.signal[i][0] > self.t1:
-				
 				timelist.append(self.signal[i][0]-1)
-				
 				for e,v in datalist.items():
 					datalist[e]['trace'].append(( datalist[e]['state'] * .95) + datalist[e]['offset']  )
-
 				timelist.append(self.signal[i][0])
-
-				for c, dat in self.signal[i][1]:   #process the changes
-					datalist[c]['newstate'] = dat
-
 				for e,v in datalist.items():
 					datalist[e]['trace'].append((datalist[e]['newstate']  * .95 ) + datalist[e]['offset'])
-
+			for e,v in datalist.items():
 				datalist[e]['state'] = datalist[e]['newstate']
-
 		ndl = {}
 		names = []
 		for v,d in datalist.items():
@@ -205,13 +208,10 @@ class VCDFile():
 		
 		if val in ['X','x','Z','z']:
 			val = 0
-		
 		if val:
 			self.variables[var]['flags'] |=  SIGNAL_TYPE_CHANGE_RISING
-					
 		else:
 			self.variables[var]['flags'] |=  SIGNAL_TYPE_CHANGE_FALLING
-
 		self.variables[var]['state'] = val
 
 	def updateSignal(self, signal, val):
@@ -257,7 +257,7 @@ class VCDFile():
 		self.setT1(secondsToTimescale(val))
 	
 	def setT2s(self, val):
-		self.setT1(secondsToTimescale(val))
+		self.setT2(secondsToTimescale(val))
 
 	def getTime(self):
 		return self.timescaleToSeconds(self.current_time)

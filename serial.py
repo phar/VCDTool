@@ -28,7 +28,7 @@ def gotSerialByte(data,parity):
 
 
 def decodeSerial(vcd,signal, arg):
-	vcd.triggerEnabled(False)
+	vcd.enableTriggers(False)
 	vcd.advanceTime(((1.0/BAUD)/2.0))
 	vcd.advanceTime(1.0/BAUD) #start bit
 
@@ -59,7 +59,7 @@ def decodeSerial(vcd,signal, arg):
 		parity_ok = True
 
 	gotSerialByte(byte,parity_ok)
-	vcd.triggerEnabled(True)
+	vcd.enableTriggers(True)
 
 
 f = VCDFile("serial2.vcd")
